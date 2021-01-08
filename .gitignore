@@ -1,5 +1,12 @@
 host-owner-filter
-routinetest.go
+routinestest.go
+routinestest
 runDns.go
+runDns
 runWhois.go
+runWhois
 *.txt
+*.dat
+soa.ns
+tld
+unique
