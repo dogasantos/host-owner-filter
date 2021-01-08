@@ -1885,6 +1885,8 @@ func dnsGetSoaServers(hostname string) []string {
 
 func buildKnownHostsSoaDb(channel chan []string, knownDomainsList []string) {
 	var knownSoaHosts []string
+	fmt.Println("[*] Building SOA record database")
+	
 	for _,knownDomain := range knownDomainsList {
 		soahosts := dnsGetSoaServers(knownDomain)
 		for _,soa := range soahosts {
@@ -1914,13 +1916,14 @@ func hostVerify(ch chan []string, options *Options, host string, wg * sync.WaitG
 	defer wg.Done()
 	
 	if len(options.Domain) > 0 {
+		fmt.Println("[*] Direct subdomain match test")
 		dt := ParseDomainTokens(host)
 		if dt.Domain == options.Domain {
 			match = true
 			fmt.Printf("SUB:%s\n",host)
 		}
 	} else if len(options.Domains) > 0 {
-		
+		fmt.Println("[*] Direct subdomain match test")
 		for _,knownDomain := range options.Domains {
 			dt := ParseDomainTokens(host)
 			
@@ -1932,6 +1935,7 @@ func hostVerify(ch chan []string, options *Options, host string, wg * sync.WaitG
 	}
 	
 	if match == false && len(options.WhoisString) > 0 {
+		fmt.Println("[*] Whois match test")
 		match = whoisCheck(options.WhoisString, host)
 		if match == true {
 			fmt.Printf("WHOIS:%s\n",host)
@@ -1944,7 +1948,7 @@ func hostVerify(ch chan []string, options *Options, host string, wg * sync.WaitG
 	}
 
 	if len(knownSoaHosts) == 0 {
-
+		fmt.Println("[*] SOA record match test")
 		if match == false && len(options.Domain) >0 {
 			match = dnsCheck(knownSoaHosts, host)
 			if match == true {
