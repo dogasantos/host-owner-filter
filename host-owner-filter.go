@@ -1821,7 +1821,7 @@ func buildKnownHostsSoaDb(verbose bool,knownDomainsList []string) []string {
 	var knownSoaHosts []string
 
 	fmt.Println("[*] Collecting SOA hosts")
-	for _,knownDomain := range knownDomainsList {
+	for _, knownDomain := range knownDomainsList {
 		if verbose {
 			fmt.Printf("  + Known seed domain: %s\n",knownDomain)
 		}
@@ -1913,6 +1913,9 @@ func whoisVerify(knownTokens []string, host string) bool {
 func main() {	
 	options := parseOptions()
 	var found []string
+	var hostname string 
+	var knownDomain string
+	
 	
 	bytesRead, _ := ioutil.ReadFile(options.Hosts)
 	file_content := string(bytesRead)
@@ -1930,8 +1933,8 @@ func main() {
 	}
 	
 	fmt.Println("[*] Comparing data")
-	for _, knownDomain := range knownDomains {
-		for _, hostname := range hosts {
+	for _, knownDomain = range knownDomains {
+		for _, hostname = range hosts {
 			if len(hostname) > 2 {
 				if sliceContainsElement(found, hostname) == false {
 					if subVerify(knownDomain, hostname) ==  true {
@@ -1941,14 +1944,13 @@ func main() {
 						found = append(found, hostname)
 						continue
 					}
-
-				} 
+				}
 			}
 		}
 	}
 
-	for _, knownDomain := range knownDomains {
-		for _, hostname := range hosts {
+	for _, knownDomain = range knownDomains {
+		for _, hostname = range hosts {
 			if len(hostname) > 2 {
 				if sliceContainsElement(found, hostname) == false {
 					
@@ -1959,7 +1961,7 @@ func main() {
 						found = append(found, hostname)
 						continue
 					}
-				} 
+				}
 			}
 		}
 	}
@@ -1994,9 +1996,6 @@ func main() {
 	}
 	for _, fh := range found {
 		fmt.Println(fh)
-		
 	}
 
-		
-		
 }
