@@ -1652,7 +1652,10 @@ var RootSoa = []string {
 	"zone-ds.registry.net.za",
 	"zone.easydns.com",
 	"zone.tc",
-	"zoneadmin.cloud.gov.ge"}
+	"zoneadmin.cloud.gov.ge",
+	"guss.ns.cloudflare.com", //cloudflare
+	"dns.cloudflare.com" } //cloudflare
+
 
 
 var DefaultResolvers = []string{
