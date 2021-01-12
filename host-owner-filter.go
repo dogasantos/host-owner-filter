@@ -1948,19 +1948,21 @@ func main() {
 		}
 	}
 
-	fmt.Printf("[*] Building SOA data for the remaining hosts\n")
-	knownSoaServers := buildKnownHostsSoaDb(options.Verbose,knownDomains)
-	for _, knownDomain = range knownDomains {
-		for _, hostname = range hosts {
-			if len(hostname) > 2 {
-				if sliceContainsElement(found, hostname) == false {
-					
-					if soaVerify(knownSoaServers, hostname) ==  true {
-						if options.Verbose {
-							fmt.Printf("  + %s:SOA\n",hostname)
+	if len(hosts) > len(found) { // we still have some hosts to check...
+		fmt.Printf("[*] Building SOA data for the remaining hosts\n")
+		knownSoaServers := buildKnownHostsSoaDb(options.Verbose,knownDomains)
+		for _, knownDomain = range knownDomains {
+			for _, hostname = range hosts {
+				if len(hostname) > 2 {
+					if sliceContainsElement(found, hostname) == false {
+						
+						if soaVerify(knownSoaServers, hostname) ==  true {
+							if options.Verbose {
+								fmt.Printf("  + %s:SOA\n",hostname)
+							}
+							found = append(found, hostname)
+							continue
 						}
-						found = append(found, hostname)
-						continue
 					}
 				}
 			}
