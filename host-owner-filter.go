@@ -1915,7 +1915,7 @@ func main() {
 	var found []string
 	var hostname string 
 	var knownDomain string
-	
+
 	
 	bytesRead, _ := ioutil.ReadFile(options.Hosts)
 	file_content := string(bytesRead)
@@ -1925,7 +1925,6 @@ func main() {
 	fc := string(bR)
 	k := strings.Split(fc, "\n")
 	knownDomains := sliceUniqueElements(k)
-	knownSoaServers := buildKnownHostsSoaDb(options.Verbose,knownDomains)
 	
 	if options.Verbose {
 		fmt.Printf("[*] Known domains loaded: %d\n",len(knownDomains))
@@ -1949,6 +1948,8 @@ func main() {
 		}
 	}
 
+	fmt.Printf("[*] Building SOA data for the remaining hosts\n")
+	knownSoaServers := buildKnownHostsSoaDb(options.Verbose,knownDomains)
 	for _, knownDomain = range knownDomains {
 		for _, hostname = range hosts {
 			if len(hostname) > 2 {
