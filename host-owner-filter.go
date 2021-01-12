@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"flag"
 	"os"
+	"bufio"
 	"io/ioutil"
 	"strings"
 	"github.com/projectdiscovery/retryabledns"
@@ -20,8 +21,6 @@ import (
 	"github.com/bobesa/go-domain-util/domainutil"
 	whoisparser "github.com/likexian/whois-parser-go"
 	"github.com/likexian/whois-go"
-	"sync"
-
 )
 
 const banner = `
@@ -34,34 +33,13 @@ const banner = `
 `
 const Version = `0.1`
 var RootSoa = []string {
-	"ADMIN.DNS2.SERVER.AG",
-	"ADMIN.NS2.DNSSERVER.AG",
-	"ADMIN.bible.museum",
-	"BSADMIN.COB.EDU.bs",
-	"BSADMIN.COB.edu.bs",
-	"CON1.NIPR.mil",
-	"DNS.NIC.bs",
-	"DNS2.SERVER.AG",
-	"FRCU.EUN.eg",
-	"FRCU.eun.eg",
-	"FSEC-DNS-00.qidc.ne.jp",
-	"NS.eu.org",
-	"NS.nsk.ru",
-	"NS2.DNSSERVER.AG",
-	"Postmaster.FRCU.EUN.eg",
-	"Postmaster.FRCU.eun.eg",
-	"a-dns.pl",
-	"a.au",
-	"a.bh.centralnic-dns.com",
-	"a.cctld.us",
-	"a.dns-servers.net.ru",
-	"a.dns.br",
-	"a.dns.cn",
-	"a.dns.flexireg.ru",
-	"a.dns.gandi.net",
-	"a.dns.nic.aco",
-	"a.dns.nic.gea",
-	"a.dns.py",
+	"ADMIN.DNS2.SERVER.AG", "ADMIN.NS2.DNSSERVER.AG", "ADMIN.bible.museum", "BSADMIN.COB.EDU.bs",
+	"BSADMIN.COB.edu.bs", "CON1.NIPR.mil", "DNS.NIC.bs", "DNS2.SERVER.AG",
+	"FRCU.EUN.eg", "FRCU.eun.eg", "FSEC-DNS-00.qidc.ne.jp", "NS.eu.org",
+	"NS.nsk.ru", "NS2.DNSSERVER.AG", "Postmaster.FRCU.EUN.eg", "Postmaster.FRCU.eun.eg",
+	"a-dns.pl", "a.au", "a.bh.centralnic-dns.com", "a.cctld.us",
+	"a.dns-servers.net.ru", "a.dns.br", "a.dns.cn", "a.dns.flexireg.ru",
+	"a.dns.gandi.net", "a.dns.nic.aco", "a.dns.nic.gea", "a.dns.py",
 	"a.dns.ripn.net",
 	"a.dns.tw",
 	"a.dnspod.com",
@@ -1685,27 +1663,13 @@ var DefaultResolvers = []string{
 	"9.9.9.9:53", // Quad9
 }
 
-var RootServers = []string {
-	"gtld-servers.net",
-	"verisign-grs.com",
-	"afilias-nst.info",
-	"nominet.org.uk",
-	"nic.uk",
 
-}
 type Options struct {
-	Domain         	  string
 	Domainf           string
-	Domains           []string
 	Hosts             string
-	Host              string
-	WhoisString		  string
 	OutputFile        string
 	Silent            bool
 	Verbose           bool
-	//A                 bool
-	//CNAME             bool
-	//SOA               bool
 }
 
 type DomainTokens struct {
@@ -1713,7 +1677,6 @@ type DomainTokens struct {
 	Domain string
 	Tld string
 }
-
 
 func showBanner() {
 	fmt.Printf("%s", banner)
@@ -1728,6 +1691,7 @@ func sliceContainsElement(slice []string, element string) bool {
 	}
 	return retval
 }
+
 func sliceUniqueElements(slice []string) []string {
     keys := make(map[string]bool)
     list := []string{}
@@ -1742,16 +1706,7 @@ func sliceUniqueElements(slice []string) []string {
     return list
 }
 
-func (options *Options) validateOptions() {
-	if len(options.Hosts) > 0 && len(options.Host) >0 {
-		fmt.Println("[x] -l and -u can't be used at the same time.")
-		os.Exit(3)
-	}
-
-	if len(options.Hosts) == 0 && len(options.Host)  == 0 {
-		fmt.Println("[x] Must specify -l or -u")
-		os.Exit(3)
-	}
+func (options *Options) validateOptions() { 
 
 	if len(options.Hosts) > 0{
 		_, err := os.Stat(options.Hosts)
@@ -1760,29 +1715,24 @@ func (options *Options) validateOptions() {
 			os.Exit(3)
 		}
 	}
-	if options.Verbose && options.Silent {
-		fmt.Println("[x] Verbose and Silent can't be used at the same time.")
-		os.Exit(3)
+	if len(options.Domainf) > 0{
+		_, err := os.Stat(options.Domainf)
+		if os.IsNotExist(err) {
+			fmt.Printf("[x] Input file does not exist: %s",options.Domainf)
+			os.Exit(3)
+		}
 	}
-	/*if !options.A && !options.CNAME && !options.SOA {
-		fmt.Println("[x] Must specify a dns record type to query")
-		os.Exit(3)
-	}*/
+	
+	
 }
 
 func parseOptions() *Options {
 	options := &Options{}
-	flag.StringVar(&options.Domain, 		"d", "", "Main domain to serve as a seed to compare")
-	flag.StringVar(&options.Domainf, 		"D", "", "List of known domains to serve as a seed to compare")
-	flag.StringVar(&options.WhoisString, 	"w", "", "Whois string to match (in Org, Email or technicalContact->name")
+	flag.StringVar(&options.Domainf, 		"K", "", "List of known domains to serve as a seed to compare")
 	flag.StringVar(&options.Hosts, 			"L", "", "File input with list of subdomains")
-	flag.StringVar(&options.Host, 			"l", "", "Check a single host")
 	flag.StringVar(&options.OutputFile, 	"o", "", "File to write output to (optional)")
-	flag.BoolVar(&options.Silent, 			"silent", false, "Show only results in the output")
 	flag.BoolVar(&options.Verbose, 			"verbose", false, "Verbose output")
-	//flag.BoolVar(&options.A, 				"a", false, "Query A record")
-	//flag.BoolVar(&options.CNAME, 			"cname", false, "Query CNAME record")
-	//flag.BoolVar(&options.SOA, 				"soa", false, "Query SOA record")
+	
 	flag.Parse()
 
 	showBanner()
@@ -1799,6 +1749,7 @@ func ParseDomainTokens(value string) (*DomainTokens){
 	return &d
 }
 
+
 func getParsedWhois(domain string) (result whoisparser.WhoisInfo, err error) {
 	whoisRawData, err := whois.Whois(domain)
 	if err != nil {
@@ -1814,25 +1765,14 @@ func whoisCheck(pattern string, domain string) bool {
 	pWhois, err := getParsedWhois(domain)
 	if err == nil {
 		if pWhois.Registrant != nil {
-			//fmt.Printf("Registrant.Name: %s\n",pWhois.Registrant.Name)
-			//fmt.Printf("Registrant.Organization: %s\n",pWhois.Registrant.Organization)
-			//fmt.Printf("Registrant.Email: %s\n",pWhois.Registrant.Email)	
-			if strings.Contains(pWhois.Registrant.Name,pattern) {
-				retval = true
-			} else if strings.Contains(pWhois.Registrant.Organization,pattern) && retval == false {
+			if strings.Contains(pWhois.Registrant.Organization,pattern) && retval == false {
 				retval = true
 			} else if strings.Contains(pWhois.Registrant.Email,pattern) && retval == false {
 				retval = true
 			}
 		}
 		if pWhois.Technical != nil && retval == false  {
-			//fmt.Printf("Technical.Name: %s\n",pWhois.Technical.Name)
-			//fmt.Printf("Technical.Organization: %s\n",pWhois.Technical.Organization)
-			//fmt.Printf("Technical.Email: %s\n",pWhois.Technical.Email)
-
-			if strings.Contains(pWhois.Technical.Name,pattern) {
-				retval = true
-			} else if strings.Contains(pWhois.Technical.Organization,pattern) && retval == false {
+			if strings.Contains(pWhois.Technical.Organization,pattern) && retval == false {
 				retval = true
 			} else if strings.Contains(pWhois.Technical.Email,pattern) && retval == false {
 				retval = true
@@ -1840,12 +1780,6 @@ func whoisCheck(pattern string, domain string) bool {
 		}
 
 		if pWhois.Administrative != nil && retval == false {
-			//fmt.Printf("Administrative.Name: %s\n",pWhois.Administrative.Name)
-			//fmt.Printf("Administrative.Organization: %s\n",pWhois.Administrative.Organization)
-			//fmt.Printf("Administrative.Email: %s\n",pWhois.Administrative.Email)
-			if strings.Contains(pWhois.Administrative.Name,pattern) {
-				retval = true
-			}
 			if strings.Contains(pWhois.Administrative.Organization,pattern) && retval == false {
 				retval = true
 			}
@@ -1854,7 +1788,7 @@ func whoisCheck(pattern string, domain string) bool {
 			}
 		}
 	}
-	
+
 	return retval
 }
 
@@ -1883,22 +1817,24 @@ func dnsGetSoaServers(hostname string) []string {
 	return soa
 }
 
-func buildKnownHostsSoaDb(channel chan []string, knownDomainsList []string) {
+func buildKnownHostsSoaDb(verbose bool,knownDomainsList []string) []string {
 	var knownSoaHosts []string
-	fmt.Println("[*] Building SOA record database")
-	
+
+	fmt.Println("[*] Collecting SOA hosts")
 	for _,knownDomain := range knownDomainsList {
+		if verbose {
+			fmt.Printf("  + Known seed domain: %s\n",knownDomain)
+		}
 		soahosts := dnsGetSoaServers(knownDomain)
 		for _,soa := range soahosts {
 			knownSoaHosts = append(knownSoaHosts, soa)
 		}
 	}
 	uniqueSoaHosts := sliceUniqueElements(knownSoaHosts)
-	channel <- uniqueSoaHosts
-	close(channel)
+	return uniqueSoaHosts
 }
 
-func dnsCheck(knownSoaHosts []string, host string) bool {
+func soaVerify(knownSoaHosts []string, host string) bool {
 	retval := false
 	targetSoa := dnsGetSoaServers(host)
 
@@ -1910,102 +1846,146 @@ func dnsCheck(knownSoaHosts []string, host string) bool {
 	return retval
 }
 
-func hostVerify(ch chan []string, options *Options, host string, wg * sync.WaitGroup) {
-	var match = false
-	var knownSoaHosts []string
-	defer wg.Done()
-
-	if len(options.Domain) > 0 {
-		dt := ParseDomainTokens(host)
-		if dt.Domain == options.Domain {
-			match = true
-			fmt.Printf("SUB:%s\n",host)
-		}
-	} else if len(options.Domains) > 0 {
-		for _,knownDomain := range options.Domains {
-			dt := ParseDomainTokens(host)
-			
-			if dt.Domain == knownDomain {
-				match = true
-				fmt.Printf("SUB:%s\n",host)
-			}
-		}
-	}
-	
-	if match == false && len(options.WhoisString) > 0 {
-		match = whoisCheck(options.WhoisString, host)
-		if match == true {
-			fmt.Printf("WHOIS:%s\n",host)
-		}
-	}
-	
-	//buildKnownHostsSoaDb processing result:
-	for msg := range ch {
-		knownSoaHosts = msg
-	}
-
-	if len(knownSoaHosts) == 0 {
-		if match == false && len(options.Domain) >0 {
-			match = dnsCheck(knownSoaHosts, host)
-			if match == true {
-				fmt.Printf("SOA:%s\n",host)
-			}
-		} else if match == false && len(options.Domains) > 0 {
-			match = dnsCheck(knownSoaHosts, host)
-			if match == true {
-				fmt.Printf("SOA:%s\n",host)
-				
-			}
-				// vou ter que o soa de todos os known antecipadamente\
-				// e so entao verificar se algum deles da match com o target domain
-				// da forma que esta hoje ,eu checo todos com todos, e ta dando muito resultaod repitido 
-			
-		}
-	}
-	
+func subVerify(knownDomain string, host string) bool {
+	var retval = false 
+	dt := ParseDomainTokens(host)
+	if dt.Domain == knownDomain {
+		retval = true
+	} 
+	return retval
 }
+
+
+func buildKnownWhoisDb(verbose bool, knownDomainsList []string) []string {
+	var tokens []string
+
+	fmt.Println("[*] Collecting Whois data")
+	for _,knownDomain := range knownDomainsList {
+		if verbose {
+			fmt.Printf("  + Known seed domain: %s\n",knownDomain)
+		}
+		whoisParsedData,_ := getParsedWhois(knownDomain)
+
+		if whoisParsedData.Registrant != nil {
+			if len(whoisParsedData.Registrant.Organization) > 1 {
+				tokens = append(tokens, whoisParsedData.Registrant.Organization)
+			}
+			if len(whoisParsedData.Registrant.Email) > 1 {
+				tokens = append(tokens, whoisParsedData.Registrant.Email)
+			}
+		}
+		if whoisParsedData.Administrative != nil {
+			if len(whoisParsedData.Administrative.Organization) > 1 {
+				tokens = append(tokens, whoisParsedData.Administrative.Organization)
+			}
+			if len(whoisParsedData.Administrative.Email) > 1 {
+				tokens = append(tokens, whoisParsedData.Administrative.Email)
+			}
+		}
+		if whoisParsedData.Technical != nil {
+			if len(whoisParsedData.Technical.Organization) > 1 {
+				tokens = append(tokens, whoisParsedData.Technical.Organization)
+			}
+			if len(whoisParsedData.Technical.Email) > 1 {
+				tokens = append(tokens, whoisParsedData.Technical.Email)
+			}
+		}
+	}
+	uniqueTokens := sliceUniqueElements(tokens)
+	fmt.Println("  + Done")
+	return uniqueTokens
+}
+
+
+func whoisVerify(knownTokens []string, host string) bool {
+	var retval = false
+
+	for _,token := range knownTokens {
+		if whoisCheck(token, host) == true{
+			retval = true
+			break
+		}
+	}
+	return retval
+}
+
 
 func main() {	
 	options := parseOptions()
-
-	var wg sync.WaitGroup
-
-	var host string
-	var hosts []string
-	var temp []string
-	var hostname string
+	var found []string
 	
-	ch := make(chan []string)
+	bytesRead, _ := ioutil.ReadFile(options.Hosts)
+	file_content := string(bytesRead)
+	hosts := strings.Split(file_content, "\n")
 	
-	if len(options.Host) > 0 {
-		host = options.Host
-		temp = append(temp, options.Domain)
-		go buildKnownHostsSoaDb(ch, temp)
-		go hostVerify(ch, options, host, &wg)
-
-	} else {
-		bytesRead, _ := ioutil.ReadFile(options.Hosts)
-		file_content := string(bytesRead)
-		hosts = strings.Split(file_content, "\n") // a slice with all hostnames
-		
-		bR, _ := ioutil.ReadFile(options.Domainf)
-		fc := string(bR)
-		options.Domains = strings.Split(fc, "\n")
-
-		go buildKnownHostsSoaDb(ch, options.Domains)
-		
-		for _, hostname = range hosts {
+	bR, _ := ioutil.ReadFile(options.Domainf)
+	fc := string(bR)
+	k := strings.Split(fc, "\n")
+	knownDomains := sliceUniqueElements(k)
+	knownSoaServers := buildKnownHostsSoaDb(options.Verbose,knownDomains)
+	
+	if options.Verbose {
+		fmt.Printf("[*] Known domains loaded: %d\n",len(knownDomains))
+		fmt.Printf("[*] Target hosts loaded: %d\n",len(hosts))
+	}
+	
+	fmt.Println("[*] Comparing data")
+	for _, knownDomain := range knownDomains {
+		for _, hostname := range hosts {
 			if len(hostname) > 2 {
-				wg.Add(1)
-				go hostVerify(ch,options, hostname, &wg)
+				if sliceContainsElement(found, hostname) == false {
+					if subVerify(knownDomain, hostname) ==  true {
+						if options.Verbose {
+							fmt.Printf("  + %s:SUB\n",hostname)
+						}
+						found = append(found, hostname)
+						continue
+					}
+
+					if soaVerify(knownSoaServers, hostname) ==  true {
+						if options.Verbose {
+							fmt.Printf("  + %s:SOA\n",hostname)
+						}
+						found = append(found, hostname)
+						continue
+					}
+				} 
 			}
 		}
 	}
 
+	if len(hosts) > len(found) { // we still have some hosts to check...
+		fmt.Printf("[*] Building whois data for the remaining hosts\n")
+		knownWhoisData := buildKnownWhoisDb(options.Verbose,knownDomains)
+		for _, h := range hosts {
+			if sliceContainsElement(found, h) == false {
+				if whoisVerify(knownWhoisData, h) ==  true {
+					if options.Verbose {
+						fmt.Printf("  + %s:WHOIS\n", h)
+					}
+					found = append(found, h)
+					continue
+				}
+			}
+		}
+	}
+	fmt.Printf("[*] Found %d hosts\n",len(found))
+
 	
+	
+	if len(options.OutputFile) >0 {
+		file, _ := os.Create(options.OutputFile)
+		writer := bufio.NewWriter(file)
+		for _, fh := range found {
+			_, _ = writer.WriteString(fh + "\n")
+		}
+		writer.Flush()
+	}
+	for _, fh := range found {
+		fmt.Println(fh)
+		
+	}
 
-	wg.Wait()
+		
+		
 }
-
-
-
