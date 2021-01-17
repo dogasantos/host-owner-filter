@@ -1620,7 +1620,6 @@ var RootSoa = []string {
 	"tld1.nic.jprs",
 	"tld1.nic.ntt",
 	"tld1.nic.sakura",
-	"to",
 	"tzh.unh.edu",
 	"udns1.tld.mu",
 	"uognoc.triton.uog.edu",
@@ -1652,11 +1651,23 @@ var RootSoa = []string {
 	"zone-ds.registry.net.za",
 	"zone.easydns.com",
 	"zone.tc",
+	"a.sec.dns.br",
 	"zoneadmin.cloud.gov.ge",
 	"guss.ns.cloudflare.com", //cloudflare
-	"dns.cloudflare.com" } //cloudflare
+	"dns.cloudflare.com",
+	"ns1-01.azure-dns.com","ns1-02.azure-dns.com","ns1-03.azure-dns.com","ns1-04.azure-dns.com",
+	"ns1-05.azure-dns.com","ns1-06.azure-dns.com","ns1-07.azure-dns.com","ns1-08.azure-dns.com",
+	"azuredns-hostmaster.microsoft.com" } 
 
-
+var BlacklistedSoaDomains = []string {
+	"amazon.com",
+	"hostmaster.com",
+	"inmotion.com",
+	"secureserver.com",
+	"godaddy.com",
+	"dreamhost.com",
+	"a.sec.dns.br",
+	"locaweb.com.br" }
 
 var DefaultResolvers = []string{
 	"1.1.1.1:53", // Cloudflare
@@ -1671,6 +1682,7 @@ type Options struct {
 	Domainf           string
 	Hosts             string
 	OutputFile        string
+	BlacklistSoa      string
 	Silent            bool
 	Verbose           bool
 }
@@ -1685,6 +1697,7 @@ func showBanner() {
 	fmt.Printf("%s", banner)
 	fmt.Printf("\t\t\t\t\t\t\t\tversion: %s\n\n",Version)
 }
+
 func sliceContainsElement(slice []string, element string) bool {
 	retval := false
 	for _, e := range slice {
@@ -1811,7 +1824,10 @@ func dnsGetSoaServers(hostname string) []string {
 			if strings.Contains(t,".") {
 				if strings.Contains(t,".") {
 					if sliceContainsElement(RootSoa,t) == false {
-						soa = append(soa,t)
+						dtok := ParseDomainTokens(t)
+						if sliceContainsElement(BlacklistedSoaDomains, dtok.Domain) == false {
+							soa = append(soa,t)
+						}
 					}
 				}
 			}
