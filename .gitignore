@@ -1,4 +1,3 @@
-host-owner-filter
 routinestest.go
 routinestest
 runDns.go
@@ -10,3 +9,5 @@ runWhois
 soa.ns
 tld
 unique
+env-json-test
+env-json-test.go
